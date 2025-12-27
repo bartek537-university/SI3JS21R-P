@@ -1,0 +1,4 @@
+from solver import is_puzzle_valid
+
+if __name__ == "__main__":
+    print(is_puzzle_valid("963548127241796853587231496179853264438672915625419738752964381816327549394185672"))
