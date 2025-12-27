@@ -15,11 +15,22 @@ class Board:
         self._candidates = np.vectorize(lambda _: {*range(1, 10)})(np.empty(shape=(9, 9), dtype=object))
 
     @staticmethod
+    def _is_puzzle_valid(puzzle: str) -> bool:
+        if len(puzzle) != 81:
+            return False
+        if any(not char.isdigit() for char in puzzle):
+            return False
+        return True
+
+    @staticmethod
     def of_string(puzzle: str) -> Board:
+        if not Board._is_puzzle_valid(puzzle):
+            raise ValueError("Invalid board format.")
+
         board = Board()
 
         for i, value in enumerate(puzzle):
-            if value not in "123456789":
+            if value == "0":
                 continue
             board.place(int(value), position=(i % 9, i // 9))
 
@@ -65,6 +76,8 @@ class Board:
         assert self._values[y, x] == 0, "The tile is occupied."
         assert 1 <= value <= 9, "The value is out of range."
 
+        assert value in self._candidates[y, x], "The value appears multiple times in the same region."
+
         self._values[y, x] = value
         self._candidates[y, x].clear()
 
@@ -80,7 +93,7 @@ class Board:
         return copy.deepcopy(self)
 
     def __hash__(self):
-        return hash(tuple(self._values.reshape(81,)))
+        return hash(tuple(self._values.reshape((81,))))
 
     def __str__(self) -> str:
         return "".join(str(value) for value in self._values.reshape((81,)))
