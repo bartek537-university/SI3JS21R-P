@@ -17,7 +17,7 @@ def _measure_time[T](f: Callable[[], T]) -> tuple[T, timedelta]:
 def _run_solve_pipeline(input_path: pathlib.Path, output_path: pathlib.Path) -> None:
     try:
         with open(input_path) as input_file:
-            unsolved_puzzle = input_file.read()
+            unsolved_puzzle = input_file.read().strip()
 
         unsolved_board = Board.of_string(unsolved_puzzle)
         solutions, measured_time = _measure_time(lambda: solve(unsolved_board))
