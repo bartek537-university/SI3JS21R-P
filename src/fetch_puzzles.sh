@@ -5,6 +5,15 @@ readonly API_URL='xxx'
 readonly DIFFICULTY_LEVELS=('xxx')
 readonly PUZZLE_PER_DIFFICULTY_COUNT=3
 
+if [ -z "$1" ]; then
+  printf "Output directory path not specified.\n" >&2
+  exit 1
+fi
+if [ ! -d "$1" ]; then
+  printf "The specified path does not exist or is not a directory.\n" >&2
+  exit 1
+fi
+
 get_puzzle() {
   local difficulty="${1:-easy}"
 
@@ -12,16 +21,20 @@ get_puzzle() {
     -H "Content-Type: application/json" \
     -H "Accept: application/json" \
     -d "{\"difficulty\":\"$difficulty\"}"); then
-    echo "Failed to fetch puzzle." >&2
+    printf "Failed to fetch puzzle." >&2
     return 1
   fi
 
-  echo "$response" >&1
+  printf "%s" "$response"
 }
 
+puzzle_index=0
+
 for difficulty in "${DIFFICULTY_LEVELS[@]}"; do
-  for i in $(seq -f "%02g" 1 $PUZZLE_PER_DIFFICULTY_COUNT); do
-    puzzle=$(get_puzzle "$difficulty" | jq -r '.puzzle')
-    echo "$puzzle" > "${difficulty}_${i}.txt"
+  for _ in $(seq "$PUZZLE_PER_DIFFICULTY_COUNT"); do
+    printf -v file_name "%02d_%s.txt" $puzzle_index "$difficulty"
+    get_puzzle "$difficulty" | jq -r ".puzzle" > "$1"/"$file_name"
+
+    ((puzzle_index++))
   done
 done
