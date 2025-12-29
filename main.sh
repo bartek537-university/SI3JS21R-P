@@ -5,11 +5,14 @@ readonly output_dir='./data/output'
 readonly report_dir='./data/reports'
 readonly backup_dir='./data/backups'
 
+readonly backup_prog=(python3 './src/backup_reports.py')
 readonly solver_prog=(python3 './src/solve_puzzle.py')
 readonly report_prog=(python3 './src/create_report.py')
 
 create_backup() {
   printf "Creating backup...\n"
+
+  "${backup_prog[@]}" "$1" "$2"
 }
 
 solve_puzzles() {
@@ -36,18 +39,17 @@ create_report() {
   printf "Creating report...\n"
 
   "${report_prog[@]}" "$1" "$2"
-
-  echo "$report_file"
 }
 
 open_report() {
   printf "Opening report in the default browser...\n"
+
   open "$1"
 }
 
 report_file="$report_dir/report_$(date +%Y%m%d_%H%M).html"
 
-create_backup
+create_backup "$report_dir" "$backup_dir"
 solve_puzzles "$input_dir" "$output_dir"
 create_report "$output_dir" "$report_file"
 open_report "$report_file"
