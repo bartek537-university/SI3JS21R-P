@@ -1,0 +1,124 @@
+{% macro sudoku_board(board) %}
+    <table class="sudoku">
+        <tbody>
+        {% for row in board | list | batch(9) %}
+            <tr>
+                {% for value in row %}
+                    <td>{{ value if value != "0" else "" }}</td>
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endmacro %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Report {{ generated_at }}</title>
+    <meta charset="UTF-8"/>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: sans-serif;
+            margin: 0 auto;
+            padding: 24px 40px;
+            max-width: 1024px;
+        }
+
+        header {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 24px;
+            justify-content: space-between;
+
+            h1 {
+                letter-spacing: -0.6px;
+            }
+        }
+
+        .report_table {
+            border-collapse: collapse;
+            text-align: left;
+            width: 100%;
+
+            & > thead > tr > th,
+            & > tbody > tr > td {
+                padding: 16px 12px;
+            }
+
+            & > tbody > tr {
+                border-top: 2px solid hsl(0, 0%, 90%);
+
+                &:nth-child(odd) {
+                    background: hsl(0, 0%, 95%);
+                }
+            }
+        }
+
+        .sudoku {
+            border: 3px solid black;
+            border-collapse: collapse;
+            width: max-content;
+
+            &:not(:last-child) {
+                margin-bottom: 12px;
+            }
+
+            tr:nth-child(3n) {
+                border-bottom: 3px solid black;
+            }
+
+            td {
+                text-align: center;
+                border-color: inherit;
+                border-style: solid;
+                border-width: 0 1px 1px 0;
+                height: 32px;
+                width: 32px;
+            }
+
+            td:nth-child(3n) {
+                border-right: 3px solid black;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Sudoku Solver</h1>
+    <p>Generated on <time>{{ generated_at }}</time></p>
+</header>
+<main>
+    <table class="report_table">
+        <thead>
+        <tr>
+            <th>File</th>
+            <th>Time</th>
+            <th>Puzzle</th>
+            <th>Solutions</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for result in results %}
+            <tr>
+                <td>{{ result.file_name }}</td>
+                <td>{{ result.measured_time }}</td>
+                <td style="width: 1px;">
+                    {{ sudoku_board(result.unsolved_puzzle) }}
+                </td>
+                <td style="width: 1px;">
+                    {% for solved_puzzle in result.solved_puzzles %}
+                        {{ sudoku_board(solved_puzzle) }}
+                    {% endfor %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</main>
+</body>
+</html>
