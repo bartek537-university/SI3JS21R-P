@@ -23,10 +23,10 @@ def _run_solve_pipeline(input_path: pathlib.Path, output_path: pathlib.Path) -> 
         solutions, measured_time = _measure_time(lambda: solve(unsolved_board))
 
         with open(output_path, "w+") as output_file:
-            output_file.write(f"{len(solutions)},{measured_time.total_seconds()}\n")
+            output_file.write(f"{unsolved_puzzle},{len(solutions)},{measured_time.total_seconds()}\n")
             for solution in solutions:
-                is_solution_valid = is_puzzle_valid(str(solution))
-                output_file.write(f"{solution},{int(is_solution_valid)}\n")
+                assert is_puzzle_valid(str(solution)), "Invalid solution found."
+                output_file.write(f"{solution}\n")
 
     except FileNotFoundError as error:
         print(error)
@@ -39,8 +39,8 @@ def _run_solve_pipeline(input_path: pathlib.Path, output_path: pathlib.Path) -> 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("input_path", type=pathlib.Path, help="The input file path for an unsolved puzzle.")
-    parser.add_argument("output_path", type=pathlib.Path, help="The output file path for the solved puzzle.")
+    parser.add_argument("input_path", type=pathlib.Path, help="Input file path for an unsolved puzzle.")
+    parser.add_argument("output_path", type=pathlib.Path, help="Output file path for the solved puzzle.")
 
     args = parser.parse_args()
 
