@@ -17,6 +17,47 @@ def _find_naked_singles(board: Board) -> list[tuple[int, Position]]:
     return naked_singles
 
 
+def _find_hidden_single(board: Board, positions: list[Position]) -> list[tuple[int, Position]]:
+    counts = [0] * 10
+    history: list[Position | None] = [None] * 10
+
+    for position in positions:
+        if board.get_value(position) != 0:
+            continue
+        for candidate in board.get_candidates(position):
+            counts[candidate] += 1
+            history[candidate] = position
+
+    hidden_singles: list[tuple[int, Position]] = []
+
+    for value in range(1, 10):
+        if counts[value] != 1:
+            continue
+        position = history[value]
+        hidden_singles.append((value, position))
+
+    return hidden_singles
+
+
+def _find_hidden_singles(board: Board) -> list[tuple[int, Position]]:
+    hidden_singles: set[tuple[int, Position]] = set()
+
+    for y in range(9):
+        row_positions = [(x, y) for x in range(9)]
+        hidden_singles.update(_find_hidden_single(board, row_positions))
+
+    for x in range(9):
+        column_positions = [(x, y) for y in range(9)]
+        hidden_singles.update(_find_hidden_single(board, column_positions))
+
+    for bx in range(0, 9, 3):
+        for by in range(0, 9, 3):
+            block_positons = [(bx + i, by + j) for i in range(3) for j in range(3)]
+            hidden_singles.update(_find_hidden_single(board, block_positons))
+
+    return list(hidden_singles)
+
+
 def _find_pivot_position(board: Board) -> Position:
     pivot_position: Position = (0, 0)
 
@@ -34,13 +75,23 @@ def _find_pivot_position(board: Board) -> Position:
 
 
 def __internal_solve(board: Board) -> list[Board]:
-    while naked_singles := _find_naked_singles(board):
-        for value, position in naked_singles:
-            # Prevent filling cells with the only candidate removed during the current iteration.
-            if len(board.get_candidates(position)) < 1:
-                return []
+    while True:
+        naked_singles = _find_naked_singles(board)
 
+        for value, position in naked_singles:
+            if value not in board.get_candidates(position):
+                return []
             board.place(value, position)
+
+        hidden_singles = _find_hidden_singles(board)
+
+        for value, position in hidden_singles:
+            if value not in board.get_candidates(position):
+                return []
+            board.place(value, position)
+
+        if len(naked_singles) == 0 and len(hidden_singles) == 0:
+            break
 
     if board.is_solved():
         return [board]
