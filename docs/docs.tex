@@ -1,0 +1,348 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[polish]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[]{algorithm2e}
+\usepackage{listings}
+
+\usepackage{color}
+\usepackage{graphicx}
+
+\lstloadlanguages{% Check Dokumentation for further languages ...
+	C,
+	C++,
+	csh,
+	Java
+}
+
+\definecolor{red}{rgb}{0.6,0,0} % for strings
+\definecolor{blue}{rgb}{0,0,0.6}
+\definecolor{green}{rgb}{0,0.8,0}
+\definecolor{cyan}{rgb}{0.0,0.6,0.6}
+
+\lstset{
+	language=csh,
+	basicstyle=\footnotesize\ttfamily,
+	numbers=left,
+	numberstyle=\tiny,
+	numbersep=5pt,
+	tabsize=2,
+	extendedchars=true,
+	breaklines=true,
+	frame=b,
+	stringstyle=\color{blue}\ttfamily,
+	showspaces=false,
+	showtabs=false,
+	xleftmargin=17pt,
+	framexleftmargin=17pt,
+	framexrightmargin=5pt,
+	framexbottommargin=4pt,
+	commentstyle=\color{green},
+	morecomment=[l]{//}, %use comment-line-style!
+	morecomment=[s]{/*}{*/}, %for multiline comments
+	showstringspaces=false,
+	morekeywords={ abstract, event, new, struct,
+		as, explicit, null, switch,
+		base, extern, object, this,
+		bool, false, operator, throw,
+		break, finally, out, true,
+		byte, fixed, override, try,
+		case, float, params, typeof,
+		catch, for, private, uint,
+		char, foreach, protected, ulong,
+		checked, goto, public, unchecked,
+		class, if, readonly, unsafe,
+		const, implicit, ref, ushort,
+		continue, in, return, using,
+		decimal, int, sbyte, virtual,
+		default, interface, sealed, volatile,
+		delegate, internal, short, void,
+		do, is, sizeof, while,
+		double, lock, stackalloc,
+		else, long, static,
+		enum, namespace, string},
+	keywordstyle=\color{cyan},
+	identifierstyle=\color{red},
+}
+\usepackage{caption}
+\DeclareCaptionFont{white}{\color{white}}
+\DeclareCaptionFormat{listing}{\colorbox{blue}{\parbox{\textwidth}{\hspace{15pt}#1#2#3}}}
+\captionsetup[lstlisting]{format=listing,labelfont=white,textfont=white, singlelinecheck=false, margin=0pt, font={bf,footnotesize}}
+
+
+\addtolength{\hoffset}{-1.5cm}
+\addtolength{\marginparwidth}{-1.5cm}
+\addtolength{\textwidth}{3cm}
+\addtolength{\voffset}{-1cm}
+\addtolength{\textheight}{2.5cm}
+\setlength{\topmargin}{0cm}
+\setlength{\headheight}{0cm}
+
+\title{
+    {\large Dokumentacja projektu}\\
+    Rozwiązywanie i weryfikacja Sudoku
+}
+\author{Bartosz Bieniek, grupa 4.7}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\newpage
+
+\section{Wstęp}
+
+Celem projektu jest zaprojektowanie i implementacja aplikacji służącej do walidacji oraz rozwiązywania łamigłówek typu Sudoku. System uruchamiany jest z poziomu skryptu powłoki, który koordynuje przetwarzanie danych, a na podstawie uzyskanych wyników tworzy raport i jego kopię zapasową.
+
+\section{Definicja problemu}
+
+Sudoku to gra logiczna, która polega na uzupełnieniu planszy $9 \times 9$ cyframi od $1$ do $9$ w taki sposób, aby każda z nich występowała dokładnie raz w każdym wierszu, kolumnie i bloku $3 \times 3$. Część pól jest wstępnie wypełniona, co narzuca ograniczenia na pozostałe pozycje. Zadaniem algorytmu jest wyznaczenie wszystkich możliwych rozwiązań, przy czym dla dobrze zadanego problemu powinno istnieć dokładnie jedno rozwiązanie.
+
+\section{Rozwiązywanie Sudoku}
+
+\subsection{Techniki deterministyczne}
+
+Techniki deterministyczne polegają na analizie aktualnie wpisanych na planszy wartości oraz list kandydatów. Ich celem jest odnajdowanie sytuacji, w których dana cyfra może zostać jednoznacznie wpisana, bez konieczności zgadywania.
+
+\subsubsection*{Naked Singles}
+Polega na wpisywaniu wartości w pola, które posiadają tylko jedną dopuszczalną wartość na liście kandydatów. Dzieje się tak w sytuacji, gdy pozostałe pozostałe możliwości zostały wyeliminowane wskutek wpisywania cyfr w danym wierszu kolumnie lub bloku.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.45\textwidth]{images/naked_singles_before.png}
+    \includegraphics[width=0.45\textwidth]{images/naked_singles_after.png}
+    
+    \caption{Przykład zastosowania techniki Naked Singles.}
+\end{figure}
+
+\begin{lstlisting}[language=python,caption={Przykładowa implementacja wyszukiwania Naked Singles w języku Python.}]
+def find_naked_singles(board: Board) -> list[tuple[int, Position]]:
+    naked_singles: list[tuple[int, Position]] = []
+
+    for position in np.ndindex((9, 9)):
+        candidates = board.get_candidates(position)
+
+        if len(candidates) == 1:
+            naked_singles.append((list(candidates)[0], position))
+
+    return naked_singles
+\end{lstlisting}
+
+\subsubsection*{Hidden Singles}
+Polega na analizie wierszy, kolumn i bloków w poszukiwaniu wartości, które mogą wystąpić tylko w jednej z należących do nich komórek. Fakt, że dana cyfra nie może pojawić się w innym miejscu sprawdzanego obszaru, wymusza jej wpisanie.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.15\textwidth]{images/hidden_singles_before.png}
+    \includegraphics[width=0.15\textwidth]{images/hidden_singles_after.png}
+    
+    \caption{Przykład zastosowania techniki Hidden Singles.}
+\end{figure}
+
+\begin{lstlisting}[language=python,caption={Przykładowa implementacja wyszukiwania Hidden Singles w języku Python.}]
+def find_hidden_single(board: Board, positions: list[Position])\
+        -> list[tuple[int, Position]]:
+    counts = [0] * 10
+    history: list[Position | None] = [None] * 10
+
+    for position in positions:
+        if board.get_value(position) != 0:
+            continue
+        for candidate in board.get_candidates(position):
+            counts[candidate] += 1
+            history[candidate] = position
+
+    hidden_singles: list[tuple[int, Position]] = []
+
+    for value in range(1, 10):
+        if counts[value] != 1:
+            continue
+        position = history[value]
+        hidden_singles.append((value, position))
+
+    return hidden_singles
+\end{lstlisting}
+
+\subsection{Przeszukiwanie z nawrotami (backtracking)}
+
+W sytuacji gdy techniki deterministyczne nie prowadzą do dalszych postępów, algorytm przechodzi do przeszukiwania z nawrotami. Dla jednej z niewypełnionych komórek wybiarany jest jeden z dostępnych kandydatów i traktowany jako hipoteza. Plansza z wpisaną wartością jest ponownie poddawana rozwiązywaniu technikami deterministycznymi i przeszukiwania z nawrotami. Jeżeli przyjęta wartość doprowadzi do rozwiązania, algorytm cofa się i próbuje innej możliwości. Proces ten jest powtarzany aż do momentu znalezienia wszystkich poprawnych rozwiązań.
+
+Do wyboru pola wykorzystywana jest heurystyka minimalnej ilości kandydatów (\textit{Minimum Remaining Values}), polegająca na wyszukaniu komórki z najmniejszą liczbą dozwolonych wartości. Zmniejsza to liczbę możliwych odgałęzień i przyspiesza wyszukiwanie rozwiązania.
+
+\begin{lstlisting}[language=python,caption={Przykładowa implementacja algorytmu przeszukiwania z nawrotami w języku Python.}]
+def solve(board: Board) -> list[Board]:
+    while True:
+        naked_singles = find_naked_singles(board)
+    
+        for value, position in naked_singles:
+            if value not in board.get_candidates(position):
+                return []
+            board.place(value, position)
+    
+        hidden_singles = find_hidden_singles(board)
+    
+        for value, position in hidden_singles:
+            if value not in board.get_candidates(position):
+                return []
+            board.place(value, position)
+    
+        if len(naked_singles) == 0 and len(hidden_singles) == 0:
+            break
+    
+    if board.is_solved():
+        return [board]
+    
+    solutions = []
+    pivot_position = mrv_find_pivot_position(board)
+    
+    for candidate in board.get_candidates(pivot_position):
+        assumed_board = copy.deepcopy(board)
+        assumed_board.place(candidate, pivot_position)
+        solutions.extend(solve(assumed_board))
+    
+    return solutions
+\end{lstlisting}
+
+\section{Weryfikacja poprawności rozwiązań}
+
+Weryfikacja rozwiązań Sudoku polega na sprawdzeniu, czy wypełniona plansza spełnia wszystkie reguły gry, a więc czy w każdym wierszu, kolumnie oraz bloku $3 \times 3$ każda z cyfr występuje dokładnie raz. Oznacza to jednocześnie, że w rozwiązaniu nie występują puste pola.
+
+Sprawdzenie to może zostać zrealizowane na dwa sposoby. Pierwszy z nich polega na bezpośrednim wykrywaniu duplikatów w poszczególnych obszarach planszy. Drugi natomiast wykorzystuje listy kandydatów, wykreślając dopuszczalne wartości w miarę wpisywania kolejnych cyfr. Rozwiązanie jest poprawne, gdy każda wstawiana liczba była w danym momencie dozwolona na swojej pozycji.
+
+\subsection{Sprawdzanie duplikatów}
+
+Pierwszy wariant algorytmu sprawdza dla każdego wiersza, kolumny i bloku $3 \times 3$, czy zawiera dokładnie jedno powtórzenie każdej cyfry oraz że żadna komórka nie jest pusta.\\
+
+\begin{algorithm}[H]
+    \KwData{Tablica liczb w obszarze $w$}
+    \KwResult{$true$ lub $false$}
+    \For{$i \gets 1..9$}{
+        \If{$w[i] = 0$}{
+            Wypisz $false$ i zakończ działanie programu.
+        }
+        \For{$j \gets 1..9$}{
+            \If{$i \neq j$ oraz $w[i] = w[j]$}{
+                Wypisz $false$ i zakończ działanie programu.
+            }
+        }    
+    }
+    Wypisz $true$ i zakończ działanie programu.
+    \caption{Przykładowa implementacja weryfikacji przez duplikaty.}
+\end{algorithm}
+
+\subsection{Listy kandydatów}
+
+Drugi wariant algorytmu wykorzystuje listy kandydatów, w którym dla każdej komórki przechowywany jest zbiór dopuszczalnych wartości, początkowo zawierający wszystkie liczby $1,2,\dots,9$. W miarę uzupełniania pomocniczej planszy kolejnymi liczbami z rozwiązania, program usuwa wartości z list kandydatów w odpowiadającym ich wierszach, kolumnach oraz blokach $3 \times 3$. Jeżeli w dowolnym momencie dana cyfra nie może zostać wpisana na swojej pozycji, rozwiązanie uznawane jest za niepoprawne.\\
+
+\begin{algorithm}[H]
+    \KwData{Rozwiązanie $s$ (tablica $9 \times 9$)}
+    \KwResult{$true$ lub $false$}
+    $p \gets$ tablica $9 \times 9$ wypełniona zbiorami $(1,2,\dots,9)$\\
+    \For{$i \gets 1..9$}{
+        \For{$j \gets 1..9$}{
+            \If{$p[i][j]$ nie zawiera $s[i][j]$}{
+                Wypisz $false$ i zakończ działanie programu.
+            }
+            Usuń wartość $s[i][j]$ z listy kandydatów $p$ dla wszyskich pól w $i$-tym wierszu, $j$-tej kolumnie oraz bloku $3 \times 3$.
+        }    
+    }
+    Wypisz $true$ i zakończ działanie programu.
+    \caption{Przykładowa implementacja weryfikacji wykorzystującej listy kandydatów.}
+\end{algorithm}
+
+\section{Implementacja}
+
+\subsection{Struktura katalogów}
+
+\begin{itemize}
+    \item \texttt{./main.sh} - główny skrypt uruchamiający całe rozwiązanie.
+    \item \texttt{./fetch\_puzzles.sh} - skrypt pobierający z internetu nierozwiązane plansze.
+    \item \texttt{./data/input} - katalog z danymi wejściowymi.
+    \item \texttt{./data/output} - katalog z danymi wyjściowymi.
+    \item \texttt{./data/reports} - katalog z wygenerowanymi raportami.
+    \item \texttt{./data/backups} - katalog z kopiami zapasowymi raportów.
+    \item \texttt{./templates/report\_template.j2} - szablon raportu.
+    \item \texttt{./src/solver/board.py} - plik zawierający model planszy Sudoku wraz z najważniejszymi operacjami, jakie można na niej przeprowadzać.
+    \item \texttt{./src/solver/solver.py} - główny skrypt odpowiedzialny za rozwiązywanie planszy.
+    \item \texttt{./src/solver/validator.py} - skrypt odpowiedzialny za sprawdzenie poprawności rozwiązania.
+    \item \texttt{./src/backup\_reports.py} - skrypt tworzący kopię zapasową raportów.
+    \item \texttt{./src/create\_report.py} - skrypt generujący raport na podstawie danych wyjściowych.
+    \item \texttt{./src/solve\_puzzle.py} - skrypt przetwarzający dane wejściowe, uruchamiający rozwiązywanie łamigłówki i mierzący czas.
+\end{itemize}
+
+\subsection{Instrukcja obsługi}
+W celu uruchomienia programu należy przejść do głównego folderu projektu, a następnie z wiersza poleceń uruchomić skrypt \texttt{main.sh}.
+
+\begin{lstlisting}[language=bash,caption={Uruchomienie.}]
+cd ~/Downloads/sudoku/
+./main.sh
+\end{lstlisting}
+
+Aplikacja automatycznie rozpocznie czytanie wejściowych plansz z folderu \texttt{./data/input/}, a ich rozwiązania zapisze w katalogu \texttt{./data/output/} w plikach o identycznych nazwach.
+
+Pliki wejściowe składają się z pojedynczego, osiemdziesięciojedno znakowego ciągu cyfr, będącego reprezentacją planszy Sudoku czytanej wierszami. Liczby od $1$ do $9$ włącznie odpowiadają wpisanym cyfrom, a $0$ pustym kratkom.
+
+\begin{lstlisting}[caption={Przykładowe dane wejściowe.},basicstyle=\scriptsize\ttfamily]
+013508000790300802006004003000100000100035070000060480070009004000050068061080905
+\end{lstlisting}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.33\textwidth]{images/example_sudoku_unsolved.png}
+    \caption{Wizualizacja planszy wejściowej.}
+\end{figure}
+
+Pliki wyjściowe składają się z przynajmniej dwóch linii, w których pierwsza zawiera informacje o planszy wejściowej, ilości rozwiązań oraz czasie rozwiązywania wyrażonym w sekundach. Kolejne wiersze odpowiadają natomiast otrzymanym rozwiązaniom.
+
+\begin{lstlisting}[caption={Przykładowe dane wyjściowe.},basicstyle=\scriptsize\ttfamily]
+013508000790300802006004003000100000100035070000060480070009004000050068061080905,2,0.002534
+213598647794316852586274193628147539149835276357962481875629314932451768461783925
+213598647794316852856274193687142539149835276325967481578629314932451768461783925
+\end{lstlisting}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.33\textwidth]{images/example_sudoku_solution_a.png}
+    \includegraphics[width=0.33\textwidth]{images/example_sudoku_solution_b.png}
+    
+    \caption{Wizualizacja wygenerowanych rozwiązań.}
+\end{figure}
+
+Na podstawie danych zawartych w folderze \texttt{./data/output} program przygotuje i otworzy w przeglądarce raport dotyczący otrzymanych wyników. Dodatkowo, w katalogu \texttt{./data/backups} zostanie utworzona kopia zapasowa wszystkich raportów, które z różnych względów jeszcze jej nie posiadają.
+
+\subsection{Instrukcja wdrożenia}
+Do uruchomienia programu wymagany jest komputer działający pod kontrolą systemu macOS lub Linux z dostępem do internetu (do instalacji wymaganych pakietów) oraz interpreter języka Python w wersji 3.14.
+
+Pobrane archiwum należy rozpakować, a następnie przejść do głównego katalogu projektu.
+    
+\begin{lstlisting}[language=bash,caption={Rozpakowanie projektu.}]
+cd ~/Downloads/
+unzip bbieniek_sudoku_projekt.zip -d ~/Downloads/sudoku
+cd ~/Downloads/sudoku/
+\end{lstlisting}
+
+Do działania programu konieczne jest również instalacja wykorzystywanych pakietów.
+
+\begin{lstlisting}[language=bash,caption={Instalacja wymaganych pakietów.},label={lst:pakiety}]
+cd ~/Downloads/sudoku/
+pip install -r requirements.txt
+\end{lstlisting}
+
+Dane wejściowe mogą zostać utworzone ręcznie w podanym wcześniej formacie lub pobrane z internetu w formie gotowych plansz, przy użyciu skryptu \texttt{fetch\_puzzles.sh}.
+
+\begin{lstlisting}[language=bash,caption={Pobranie z internetu plansz do rozwiązania.}]
+cd ~/Downloads/sudoku/
+./fetch_puzzles.sh ./data/input/
+\end{lstlisting}
+
+\subsection*{Dodatkowe informacje}
+Rozwiązanie zostało przygotowane i sprawdzone w systemie o poniższej specyfikacji.
+
+\begin{itemize}
+    \item Apple MacBook Pro, M1 Pro (ARMv8.6-A), 16 GB RAM
+    \item System operacyjny macOS 26.2 (25C56)
+    \item Interpreter Python 3.14
+\end{itemize}
+
+\end{document}
