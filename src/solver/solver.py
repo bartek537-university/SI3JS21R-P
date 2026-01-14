@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 
 from .board import Board
@@ -17,7 +19,8 @@ def _find_naked_singles(board: Board) -> list[tuple[int, Position]]:
     return naked_singles
 
 
-def _find_hidden_single(board: Board, positions: list[Position]) -> list[tuple[int, Position]]:
+def _find_hidden_single(board: Board, positions: list[Position]) \
+        -> list[tuple[int, Position]]:
     counts = [0] * 10
     history: list[Position | None] = [None] * 10
 
@@ -100,7 +103,8 @@ def __internal_solve(board: Board) -> list[Board]:
     pivot_position = _find_pivot_position(board)
 
     for candidate in board.get_candidates(pivot_position):
-        (assumed_board := board.copy()).place(candidate, pivot_position)
+        assumed_board = copy.deepcopy(board)
+        assumed_board.place(candidate, pivot_position)
         solutions.extend(__internal_solve(assumed_board))
 
     return solutions
